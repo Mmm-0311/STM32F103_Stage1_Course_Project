@@ -1,0 +1,68 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+
+# 缩进
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+IndentCaseLabels: true
+
+# 大括号风格 (style=java → Attach)
+BreakBeforeBraces: Attach
+
+# 注释缩进 (indent-col1-comments)
+IndentPPDirectives: BeforeHash
+CommentPragmas: '^ IWYU pragma:'
+
+# 块分隔 (break-blocks)
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+# 间距填充 (pad-oper, pad-comma, pad-header)
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# 指针/引用对齐 (align-pointer=name → Left)
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# 单行头部分割 (break-one-line-headers)
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+# 自动添加大括号 (add-braces) ⭐
+InsertBraces: true
+
+# 最大代码长度 (max-code-length=120)
+ColumnLimit: 120
+
+# 其他
+AlignConsecutiveMacros: true
+AlignEscapedNewlines: Left
+AlignTrailingComments: true
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakStringLiterals: true
+DerivePointerAlignment: false
+FixNamespaceComments: true
+SortIncludes: true
+IncludeBlocks: Preserve
