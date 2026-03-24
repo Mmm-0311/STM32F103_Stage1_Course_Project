@@ -7,7 +7,7 @@ int main(void) {
     Delay_Init();
 
     while (1) {
-        LED_Turn(); // 切换LED电平状态
-        Delay_Ms(500);
+        // LED_Turn(); // 切换LED电平状态
+        // Delay_Ms(500);
     }
 }
