@@ -55,6 +55,10 @@ InsertBraces: true
 # 最大代码长度 (max-code-length=120)
 ColumnLimit: 120
 
+# 新增/补充：针对 /* */ 注释的配置
+ReflowComments: false  # 关闭注释重排，/* */ 注释完全保持原样
+DoxyCommentAlignment: true  # 开启后，多行 /** */ 注释会自动对齐星号
+
 # 其他
 AlignConsecutiveMacros: true
 AlignEscapedNewlines: Left

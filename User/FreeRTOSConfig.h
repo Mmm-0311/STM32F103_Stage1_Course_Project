@@ -94,8 +94,8 @@ NVIC value of 255. */
 #define configSUPPORT_STATIC_ALLOCATION 1
 
 // 以下三个配置宏开启后，空闲任务空间的创建由FreeRTOS内核函数提供
-// #define configKERNEL_PROVIDED_STATIC_MEMORY 1
-// #define portUSING_MPU_WRAPPERS 0
-// #define configTIMER_TASK_STACK_DEPTH 128
+#define configKERNEL_PROVIDED_STATIC_MEMORY 1
+#define portUSING_MPU_WRAPPERS              0
+#define configTIMER_TASK_STACK_DEPTH        128
 
 #endif /* FREERTOS_CONFIG_H */
