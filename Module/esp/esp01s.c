@@ -10,6 +10,7 @@ uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout) {
     USART2_RxLen = 0;
     USART2_RxFlag = 0;
 
+    USART_SendString(USART1, "\r\nESP01S_Send_AT_Cmd\r\n");
     // 发送AT指令
     USART_SendString(USART2, cmd);
     USART_SendString(USART1, "Send AT command: ");
@@ -23,12 +24,17 @@ uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout) {
             if (strstr((char*)USART2_RxBuffer, expected_resp) != NULL) {
                 USART_SendString(USART1, "Response successful: ");
                 USART_SendString(USART1, (char*)USART2_RxBuffer);
+                USART_SendString(USART1, "\r\n");
                 return 0;
             } else {
                 USART_SendString(USART1, "Response failed:");
                 USART_SendString(USART1, (char*)USART2_RxBuffer);
+                USART_SendString(USART1, "\r\n");
                 return 1;
             }
+            USART2_RxFlag = 0;
+            USART2_RxLen = 0;
+            memset(USART2_RxBuffer, 0, USART2_RxLen);
         }
         Delay_Ms(1);
         t++;
@@ -39,17 +45,17 @@ uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout) {
 
 // 连接WiFi
 uint8_t ESP01S_Connect_WiFi(char* ssid, char* password) {
-    char cmd[128];
-    // 1. AT测试
-    if (ESP01S_Send_AT_Cmd("AT\r\n", "OK", 1000) != 0) {
-        USART_SendString(USART1, "ESP01S AT test failed\r\n");
-        return 1;
-    }
+    char cmd[64];
+    char current_ssid[32] = {0};
 
-    // 2. 关闭回显
-    if (ESP01S_Send_AT_Cmd("ATE0\r\n", "OK", 1000) != 0) {
-        USART_SendString(USART1, "Close echo failed\r\n");
-    }
+    // // 1. AT测试
+    // if (ESP01S_Send_AT_Cmd("AT\r\n", "OK", 1000) != 0) {
+    //     USART_SendString(USART1, "ESP01S AT test failed\r\n");
+    //     return 1;
+    // }
+
+    // 1. 关闭回显
+    ESP01S_Send_AT_Cmd("ATE0\r\n", "OK", 1000);
 
     // 3. 设置STA模式
     if (ESP01S_Send_AT_Cmd("AT+CWMODE=1\r\n", "OK", 1000) != 0) {
@@ -57,38 +63,39 @@ uint8_t ESP01S_Connect_WiFi(char* ssid, char* password) {
         return 1;
     }
 
-    // 4. 断开当前WiFi
-    if (ESP01S_Send_AT_Cmd("AT+CWQAP\r\n", "OK", 2000) != 0) {
-        USART_SendString(USART1, "Disconnect WiFi failed\r\n");
+    // 4. 查询当前WiFi
+    if (ESP01S_Get_Current_SSID(current_ssid) == 0) {
+        USART_SendString(USART1, "Current SSID: ");
+        USART_SendString(USART1, current_ssid);
+        USART_SendString(USART1, "\r\n");
+
+        // 如果已经连接目标WiFi
+        if (strcmp(current_ssid, ssid) == 0) {
+            USART_SendString(USART1, "Already connected target WiFi\r\n");
+            return 0;
+        } else {
+            // 5. 断开旧WiFi
+            USART_SendString(USART1, "the connected wifi name does not match\r\n");
+            ESP01S_Send_AT_Cmd("AT+CWQAP\r\n", "OK", 1000);
+        }
+    } else {
+        USART_SendString(USART1, "There is currently no wifi connection\r\n");
     }
 
-    Delay_S(2);
+    // Delay_Ms(50);
 
-    // 5. 连接WiFi
+    // 6. 连接新WiFi
     memset(cmd, 0, sizeof(cmd));
     sprintf(cmd, "AT+CWJAP=\"%s\",\"%s\"\r\n", ssid, password);
+    USART_SendString(USART1, cmd);
 
-    if (ESP01S_Send_AT_Cmd(cmd, "WIFI CONNECTED", 20000) != 0) {
+    if (ESP01S_Send_AT_Cmd(cmd, "WIFI CONNECTED", 1000) != 0) {
         USART_SendString(USART1, "WiFi connection failed\r\n");
         return 1;
     }
 
     USART_SendString(USART1, "WiFi connected successfully\r\n");
 
-    Delay_S(3);
-    // 新增：连接阿里云TCP服务器（替换为你的服务器公网IP和端口）
-    if (ESP01S_Connect_TCP_Server("121.41.231.209", 9003) != 0) {
-        USART_SendString(USART1, "Connect TCP server failed\r\n");
-        return 2; // 区别于WiFi连接失败
-    }
-
-    // 示例：发送WiFi名称到服务器
-    char tcp_data[64] = {0};
-    sprintf(tcp_data, "WiFi connected: %s\n", ssid);
-    ESP01S_Send_TCP_Data(tcp_data);
-    ESP01S_Send_TCP_Data("hello aliyun\n");
-
-    USART_SendString(USART1, "WiFi + TCP server connect successful!\r\n");
     return 0;
 }
 
@@ -135,5 +142,31 @@ uint8_t ESP01S_Send_TCP_Data(char* data) {
         USART_SendString(USART1, "TCP data send failed\r\n");
         return 1;
     }
+    return 0;
+}
+
+// 获取当前WiFi名称
+uint8_t ESP01S_Get_Current_SSID(char* ssid_out) {
+    char* p;
+
+    if (ESP01S_Send_AT_Cmd("AT+CWJAP?\r\n", "+CWJAP:", 1000) != 0) {
+        return 1;
+    }
+
+    // 示例返回：+CWJAP:"your_ssid"
+    p = strstr((char*)USART2_RxBuffer, "\"");
+    if (p == NULL) {
+        return 1;
+    }
+
+    char* p2 = strstr(p + 1, "\"");
+    if (p2 == NULL) {
+        return 1;
+    }
+
+    uint16_t len = p2 - (p + 1);
+    strncpy(ssid_out, p + 1, len);
+    ssid_out[len] = '\0';
+
     return 0;
 }

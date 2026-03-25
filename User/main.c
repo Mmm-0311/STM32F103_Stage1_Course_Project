@@ -65,45 +65,11 @@ int main(void) {
 
     xTaskCreate(Task_Bluetooth, "BT", WIFI_TASK_STACK_DEPTH, NULL, WIFI_TASK_PRIORITY, NULL);
     xTaskCreate(Task_ESP, "ESP", ESP_TASK_STACK_DEPTH, NULL, ESP_TASK_PRIORITY, NULL);
-    // xTaskCreate(Task_Report, "RPT", RPT_TASK_STACK_DEPTH, NULL, RPT_TASK_PRIORITY, NULL);
+    //xTaskCreate(Task_Report, "RPT", RPT_TASK_STACK_DEPTH, NULL, RPT_TASK_PRIORITY, NULL);
     vTaskStartScheduler();
+    //USART_SendString(USART2, "AT+CWJAP?\r\n");
 
     while (1) {
-        USART_SendString(USART1, "error exit!\n");
+        //USART_SendString(USART1, "error exit!\n");
     }
-    // while (1) {
-    //     // 蓝牙接收到WiFi配置信息
-    //     if (USART3_RxFlag == 1) {
-    //         // 处理蓝牙数据
-    //         USART3_RxBuffer[USART3_RxLen] = '\0';
-    //         USART_SendString(USART1, "Received Bluetooth data: ");
-    //         USART_SendString(USART1, (char*)USART3_RxBuffer);
-    //         USART_SendString(USART1, "\r\n");
-
-    //         // 解析WiFi信息
-    //         Parse_WiFi_Info((char*)USART3_RxBuffer);
-
-    //         // 打印解析结果
-    //         USART_SendString(USART1, "sparse result: \r\n");
-    //         USART_SendString(USART1, "SSID = ");
-    //         USART_SendString(USART1, wifi_ssid);
-    //         USART_SendString(USART1, "\r\n");
-    //         USART_SendString(USART1, "PASS = ");
-    //         USART_SendString(USART1, wifi_password);
-    //         USART_SendString(USART1, "\r\n\r\n");
-
-    //         // 连接WiFi
-    //         USART_SendString(USART1, "ESP01S starts connecting WiFi...\r\n");
-    //         uint8_t connect_status = ESP01S_Connect_WiFi(wifi_ssid, wifi_password);
-
-    //         // 蓝牙回复结果
-    //         Send_Bluetooth_Response(connect_status);
-
-    //         // 重置蓝牙接收状态
-    //         USART3_RxFlag = 0;
-    //         USART3_RxLen = 0;
-
-    //         memset(USART3_RxBuffer, 0, USART3_BUF_SIZE);
-    //     }
-    // }
 }
