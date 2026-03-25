@@ -1,58 +1,41 @@
 #include "esp01s.h"
 #include <stdio.h>
 #include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
 
 uint8_t ESP_WifiFlag = 0;
+char WiFi_Info[64] = {0};
 
 // 发送AT指令并等待响应
 uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout) {
-    memset(USART2_RxBuffer, 0, USART2_BUF_SIZE);
-    USART2_RxLen = 0;
-    USART2_RxFlag = 0;
-
-    USART_SendString(USART1, "\r\nESP01S_Send_AT_Cmd\r\n");
-    USART_SendString(USART1, cmd);
+    // 1. 清空缓冲区
     // 发送AT指令
     USART_SendString(USART2, cmd);
     USART_SendString(USART1, "Send AT command: ");
     USART_SendString(USART1, cmd);
-    // 中断接收以\r\n为一帧结束并把USART2_RxFlag置为1
-    // 等待响应
-    uint32_t t = 0;
-    static uint8_t Receive_Flag = 0;
-    while (t < timeout) {
-        if (USART2_RxFlag == 1) {
-            USART2_RxBuffer[USART2_RxLen] = '\0';
-            if (strstr((char*)USART2_RxBuffer, expected_resp) != NULL) {
-                USART_SendString(USART1, "Response successful: ");
-                USART_SendString(USART1, (char*)USART2_RxBuffer);
-                USART_SendString(USART1, "\r\n");
-                Receive_Flag = 1;
-            }
-            USART2_RxFlag = 0;
-            USART2_RxLen = 0;
-            memset(USART2_RxBuffer, 0, USART2_RxLen);
+    uint8_t resp_status = 1; // 默认超时Response failed
+
+    RawEspData_t esp_data;
+    if (xQueueReceive(queue_esp_at_rsp, &esp_data, pdMS_TO_TICKS(timeout)) == pdTRUE) {
+        esp_data.buffer[esp_data.len] = '\0';
+        if (strstr(esp_data.buffer, expected_resp) != NULL) {
+            USART_SendString(USART1, "Response successful: ");
+            USART_SendString(USART1, esp_data.buffer);
+            USART_SendString(USART1, "\r\n");
+
+            strncpy(WiFi_Info, esp_data.buffer, strlen(esp_data.buffer));
+            WiFi_Info[strlen(esp_data.buffer)] = '\0';
+            resp_status = 0;
         }
-        //Delay_Ms(1);
-        t++;
     }
-    if (0 == Receive_Flag) {
-        return 1;
-    }
-    Receive_Flag = 0;
-    return 0;
+    return resp_status;
 }
 
 // 连接WiFi
 uint8_t ESP01S_Connect_WiFi(char* ssid, char* password) {
     char cmd[64] = {0};
     char current_ssid[32] = {0};
-
-    // // 1. AT测试
-    // if (ESP01S_Send_AT_Cmd("AT\r\n", "OK", 1000) != 0) {
-    //     USART_SendString(USART1, "ESP01S AT test failed\r\n");
-    //     return 1;
-    // }
 
     // 1. 关闭回显
     ESP01S_Send_AT_Cmd("ATE0\r\n", "OK", 1000);
@@ -82,19 +65,19 @@ uint8_t ESP01S_Connect_WiFi(char* ssid, char* password) {
         USART_SendString(USART1, "There is currently no wifi connection\r\n");
     }
 
-    // Delay_Ms(50);
+    vTaskDelay(pdMS_TO_TICKS(3000));
 
     // 6. 连接新WiFi
     memset(cmd, 0, sizeof(cmd));
     sprintf(cmd, "AT+CWJAP=\"%s\",\"%s\"\r\n", ssid, password);
     USART_SendString(USART1, cmd);
 
-    if (ESP01S_Send_AT_Cmd(cmd, "WIFI CONNECTED", 1000) != 0) {
-        USART_SendString(USART1, "WiFi connection failed\n");
+    if (ESP01S_Send_AT_Cmd(cmd, "WIFI CONNECTED", 9000) != 0) {
+        USART_SendString(USART1, "WiFi connection failed\r\n");
         return 1;
     }
 
-    USART_SendString(USART1, "WiFi connected successfully\n");
+    USART_SendString(USART1, "WiFi connected successfully\r\n");
 
     return 0;
 }
@@ -149,12 +132,12 @@ uint8_t ESP01S_Send_TCP_Data(char* data) {
 uint8_t ESP01S_Get_Current_SSID(char* ssid_out) {
     char* p;
 
-    if (ESP01S_Send_AT_Cmd("AT+CWJAP?\r\n", "+CWJAP:", 1000) != 0) {
+    if (ESP01S_Send_AT_Cmd("AT+CWJAP?\r\n", "+CWJAP:", 3000) != 0) {
         return 1;
     }
 
     // 示例返回：+CWJAP:"your_ssid"
-    p = strstr((char*)USART2_RxBuffer, "\"");
+    p = strstr((char*)WiFi_Info, "\"");
     if (p == NULL) {
         return 1;
     }

@@ -39,6 +39,7 @@
 #include "queue.h"
 #include "stm32f10x.h"
 #include "task.h"
+#include "timers.h"
 #include "usart.h"
 
 #define WIFI_TASK_STACK_DEPTH 64
@@ -48,9 +49,6 @@
 #define RPT_TASK_STACK_DEPTH  64
 #define RPT_TASK_PRIORITY     1
 
-xQueueHandle queue_wifi_req; //request, 请求
-xQueueHandle queue_wifi_rsp; //response，响应
-
 int main(void) {
     // 初始化串口
     USART1_Config(115200); // 调试串口
@@ -59,9 +57,27 @@ int main(void) {
 
     // 开启全局中断
     // __enable_irq();
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
 
     USART_SendString(USART1, "\r\nSTM32 Bluetooth distribution network+ESP01S networking program has been started\r\n");
+
+    //创建队列
+    queue_raw_wifi = xQueueCreate(4, sizeof(RawWifiData_t));
+    queue_esp_at_rsp = xQueueCreate(8, sizeof(RawEspData_t));
+    queue_wifi_rsp = xQueueCreate(4, sizeof(WifiRsp_t));
+
+    // 创建串口帧间隔定时器
+    usart2_frame_timer =
+        xTimerCreate("USART2_FRAME", pdMS_TO_TICKS(UART2_FRAME_GAP_MS), pdFALSE, NULL, USART2_FrameTimeoutCallback);
+    usart3_frame_timer =
+        xTimerCreate("USART3_FRAME", pdMS_TO_TICKS(UART3_FRAME_GAP_MS), pdFALSE, NULL, USART3_FrameTimeoutCallback);
+
+    if (usart2_frame_timer != NULL) {
+        xTimerStart(usart2_frame_timer, 0);
+    }
+    if (usart3_frame_timer != NULL) {
+        xTimerStart(usart3_frame_timer, 0);
+    }
 
     xTaskCreate(Task_Bluetooth, "BT", WIFI_TASK_STACK_DEPTH, NULL, WIFI_TASK_PRIORITY, NULL);
     xTaskCreate(Task_ESP, "ESP", ESP_TASK_STACK_DEPTH, NULL, ESP_TASK_PRIORITY, NULL);

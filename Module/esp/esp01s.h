@@ -9,6 +9,9 @@
 #define ESP_TCP_SERVER_PORT  9003
 
 extern uint8_t ESP_WifiFlag;
+extern char WiFi_Info[64];
+
+extern QueueHandle_t queue_esp_at_rsp;
 
 // 函数声明
 uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout);
