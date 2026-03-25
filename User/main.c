@@ -42,11 +42,11 @@
 #include "usart.h"
 
 #define WIFI_TASK_STACK_DEPTH 64
-#define WIFI_TASK_PRIORITY    3
+#define WIFI_TASK_PRIORITY    1
 #define ESP_TASK_STACK_DEPTH  64
-#define ESP_TASK_PRIORITY     3
+#define ESP_TASK_PRIORITY     1
 #define RPT_TASK_STACK_DEPTH  64
-#define RPT_TASK_PRIORITY     3
+#define RPT_TASK_PRIORITY     1
 
 xQueueHandle queue_wifi_req; //request, 请求
 xQueueHandle queue_wifi_rsp; //response，响应
@@ -61,7 +61,7 @@ int main(void) {
     // __enable_irq();
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
-    USART_SendString(USART1, "STM32 Bluetooth distribution network+ESP01S networking program has been started\r\n");
+    USART_SendString(USART1, "\r\nSTM32 Bluetooth distribution network+ESP01S networking program has been started\r\n");
 
     xTaskCreate(Task_Bluetooth, "BT", WIFI_TASK_STACK_DEPTH, NULL, WIFI_TASK_PRIORITY, NULL);
     xTaskCreate(Task_ESP, "ESP", ESP_TASK_STACK_DEPTH, NULL, ESP_TASK_PRIORITY, NULL);

@@ -11,13 +11,15 @@ uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout) {
     USART2_RxFlag = 0;
 
     USART_SendString(USART1, "\r\nESP01S_Send_AT_Cmd\r\n");
+    USART_SendString(USART1, cmd);
     // 发送AT指令
     USART_SendString(USART2, cmd);
     USART_SendString(USART1, "Send AT command: ");
     USART_SendString(USART1, cmd);
-
+    // 中断接收以\r\n为一帧结束并把USART2_RxFlag置为1
     // 等待响应
     uint32_t t = 0;
+    static uint8_t Receive_Flag = 0;
     while (t < timeout) {
         if (USART2_RxFlag == 1) {
             USART2_RxBuffer[USART2_RxLen] = '\0';
@@ -25,27 +27,25 @@ uint8_t ESP01S_Send_AT_Cmd(char* cmd, char* expected_resp, uint32_t timeout) {
                 USART_SendString(USART1, "Response successful: ");
                 USART_SendString(USART1, (char*)USART2_RxBuffer);
                 USART_SendString(USART1, "\r\n");
-                return 0;
-            } else {
-                USART_SendString(USART1, "Response failed:");
-                USART_SendString(USART1, (char*)USART2_RxBuffer);
-                USART_SendString(USART1, "\r\n");
-                return 1;
+                Receive_Flag = 1;
             }
             USART2_RxFlag = 0;
             USART2_RxLen = 0;
             memset(USART2_RxBuffer, 0, USART2_RxLen);
         }
-        Delay_Ms(1);
+        //Delay_Ms(1);
         t++;
     }
-    USART_SendString(USART1, "AT instruction timeout\r\n");
-    return 2;
+    if (0 == Receive_Flag) {
+        return 1;
+    }
+    Receive_Flag = 0;
+    return 0;
 }
 
 // 连接WiFi
 uint8_t ESP01S_Connect_WiFi(char* ssid, char* password) {
-    char cmd[64];
+    char cmd[64] = {0};
     char current_ssid[32] = {0};
 
     // // 1. AT测试
@@ -90,11 +90,11 @@ uint8_t ESP01S_Connect_WiFi(char* ssid, char* password) {
     USART_SendString(USART1, cmd);
 
     if (ESP01S_Send_AT_Cmd(cmd, "WIFI CONNECTED", 1000) != 0) {
-        USART_SendString(USART1, "WiFi connection failed\r\n");
+        USART_SendString(USART1, "WiFi connection failed\n");
         return 1;
     }
 
-    USART_SendString(USART1, "WiFi connected successfully\r\n");
+    USART_SendString(USART1, "WiFi connected successfully\n");
 
     return 0;
 }

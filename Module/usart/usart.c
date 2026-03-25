@@ -164,108 +164,34 @@ void USART1_IRQHandler(void) {
 
 // 参考：Module/usart/usart.c
 void USART2_IRQHandler(void) {
-    if (USART_GetITStatus(USART2, USART_IT_RXNE) == RESET) {
-        return;
+    uint8_t rx_data;
+    if (USART_GetITStatus(USART2, USART_IT_RXNE) == SET && 0 == USART2_RxFlag) {
+        rx_data = (uint8_t)USART_ReceiveData(USART2);
+        // USART_SendString(USART1, "\r\n");
+
+        // 不再使用 0 == USART2_RxFlag 作为接收保护，避免丢数据
+        // 如果你要避免覆盖可用数据，可在上层读取后才清
+        if (USART2_RxLen < USART2_BUF_SIZE - 1) {
+            USART2_RxBuffer[USART2_RxLen++] = rx_data;
+        } else {
+            // 过长直接丢帧（或根据需求返回错误）
+            USART2_RxLen = 0;
+            USART2_RxFlag = 0;
+            memset(USART2_RxBuffer, 0, USART2_BUF_SIZE);
+        }
+
+        // 按行结束 `\r\n` 作为一条可解析结果，保留整行数据
+        if (USART2_RxLen >= 2 && USART2_RxBuffer[USART2_RxLen - 2] == '\r' &&
+            USART2_RxBuffer[USART2_RxLen - 1] == '\n') {
+            // 以 null 终止，去掉尾部 "\r\n"
+            USART2_RxLen -= 2;
+            USART2_RxBuffer[USART2_RxLen] = '\0';
+            USART2_RxFlag = 1;
+        }
+
+        USART_ClearITPendingBit(USART2, USART_IT_RXNE);
     }
-
-    uint8_t rx_data = (uint8_t)USART_ReceiveData(USART2);
-    //USART_SendString(USART1, "\r\n");
-
-    // 不再使用 0 == USART2_RxFlag 作为接收保护，避免丢数据
-    // 如果你要避免覆盖可用数据，可在上层读取后才清
-    if (USART2_RxLen < USART2_BUF_SIZE - 1) {
-        USART2_RxBuffer[USART2_RxLen++] = rx_data;
-    } else {
-        // 过长直接丢帧（或根据需求返回错误）
-        USART2_RxLen = 0;
-        memset(USART2_RxBuffer, 0, USART2_BUF_SIZE);
-        USART2_RxFlag = 0;
-    }
-
-    // 按行结束 `\r\n` 作为一条可解析结果，保留整行数据
-    if (USART2_RxLen >= 2 && USART2_RxBuffer[USART2_RxLen - 2] == '\r' && USART2_RxBuffer[USART2_RxLen - 1] == '\n') {
-        // 以 null 终止，去掉尾部 "\r\n"
-        USART2_RxLen -= 2;
-        USART2_RxBuffer[USART2_RxLen] = '\0';
-        USART2_RxFlag = 1;
-    }
-
-    USART_ClearITPendingBit(USART2, USART_IT_RXNE);
 }
-
-// USART2中断服务函数（ESP01S）
-// void USART2_IRQHandler(void) {
-//     uint8_t rx_data;
-
-//     static uint8_t state = 0;
-//     // 0: 等待 \r
-//     // 1: 等待 \n
-//     // 2: 接收数据
-//     // 3: 等待结束 \r
-//     // 4: 等待结束 \n
-
-//     if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
-//         rx_data = (uint8_t)USART_ReceiveData(USART2);
-
-//         switch (state) {
-//             case 0: // 等待起始 \r
-//                 if (rx_data == '\r') {
-//                     state = 1;
-//                 }
-//                 break;
-
-//             case 1: // 等待起始 \n
-//                 if (rx_data == '\n') {
-//                     USART2_RxLen = 0; // 开始新一帧
-//                     state = 2;
-//                 } else {
-//                     state = 0;
-//                 }
-//                 break;
-
-//             case 2: // 接收数据
-//                 if (USART2_RxLen < USART2_BUF_SIZE - 1) {
-//                     USART2_RxBuffer[USART2_RxLen++] = rx_data;
-//                 } else {
-//                     // 越界处理
-//                     USART2_RxLen = 0;
-//                     memset(USART2_RxBuffer, 0, USART2_BUF_SIZE);
-//                     state = 0;
-//                     break;
-//                 }
-
-//                 if (rx_data == '\r') {
-//                     state = 3;
-//                 }
-//                 break;
-
-//             case 3: // 等待结束 \n
-//                 if (rx_data == '\n') {
-//                     // 去掉最后的 \r
-//                     if (USART2_RxLen >= 2) {
-//                         USART2_RxLen -= 2;
-//                     }
-
-//                     // 加字符串结束符
-//                     USART2_RxBuffer[USART2_RxLen] = '\0';
-
-//                     USART2_RxFlag = 1; // 一帧完成
-
-//                     state = 0;
-
-//                 } else {
-//                     state = 2;
-//                 }
-//                 break;
-
-//             default:
-//                 state = 0;
-//                 break;
-//         }
-
-//         USART_ClearITPendingBit(USART2, USART_IT_RXNE);
-//     }
-// }
 
 // USART3中断服务函数（蓝牙）
 void USART3_IRQHandler(void) {
